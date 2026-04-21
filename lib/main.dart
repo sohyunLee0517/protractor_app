@@ -53,9 +53,9 @@ class _ProtractorScreenState extends State<ProtractorScreen> {
   double _rotation = 0.0;
   double _scale = 1.0;
 
-  late Offset _gestureStartOffset;
-  late double _gestureStartScale;
-  late double _gestureStartRotation;
+  Offset _gestureStartOffset = Offset.zero;
+  double _gestureStartScale = 1.0;
+  double _gestureStartRotation = 0.0;
 
   @override
   void initState() {
@@ -157,8 +157,8 @@ class _ProtractorScreenState extends State<ProtractorScreen> {
               child: FittedBox(
                 fit: BoxFit.cover,
                 child: SizedBox(
-                  width: _controller!.value.previewSize!.height,
-                  height: _controller!.value.previewSize!.width,
+                  width: _controller!.value.previewSize?.height ?? 1920,
+                  height: _controller!.value.previewSize?.width ?? 1080,
                   child: CameraPreview(_controller!),
                 ),
               ),
@@ -391,5 +391,6 @@ class ProtractorPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(ProtractorPainter old) => true;
+  bool shouldRepaint(ProtractorPainter old) =>
+      old.position != position || old.rotation != rotation || old.scale != scale;
 }

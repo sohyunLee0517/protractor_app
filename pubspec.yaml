@@ -1,5 +1,5 @@
 name: protractor_app
-description: "카메라 각도기 앱"
+description: "카메라 위에 각도기를 올려 각도를 정확하게 측정할 수 있는 앱입니다. 사진을 찍거나 갤러리 이미지에서도 각도 측정이 가능합니다."
 publish_to: 'none'
 
 version: 1.0.0+1

@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.CAMERA"/>
     <application
-        android:label="protractor_app"
+        android:label="각도기"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
