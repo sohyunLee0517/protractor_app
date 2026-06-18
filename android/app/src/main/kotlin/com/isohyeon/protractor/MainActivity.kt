@@ -1,4 +1,4 @@
-package com.example.protractor_app
+package com.isohyeon.protractor
 
 import io.flutter.embedding.android.FlutterActivity
 

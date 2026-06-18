@@ -41,9 +41,11 @@ class ProtractorScreen extends StatefulWidget {
   State<ProtractorScreen> createState() => _ProtractorScreenState();
 }
 
-class _ProtractorScreenState extends State<ProtractorScreen> {
+class _ProtractorScreenState extends State<ProtractorScreen>
+    with WidgetsBindingObserver {
   CameraController? _controller;
   bool _initialized = false;
+  bool _initializing = false;
   String? _errorMessage;
 
   XFile? _backgroundImage;
@@ -60,28 +62,63 @@ class _ProtractorScreenState extends State<ProtractorScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initCamera();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 카메라는 앱이 백그라운드로 가면 무효화되므로 정리하고, 돌아오면 다시 켠다.
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      final controller = _controller;
+      _controller = null;
+      controller?.dispose();
+      if (mounted) setState(() => _initialized = false);
+    } else if (state == AppLifecycleState.resumed) {
+      if (_backgroundImage == null) {
+        _initCamera();
+      }
+    }
+  }
+
   Future<void> _initCamera() async {
+    if (_initializing) return;
     if (_cameras.isEmpty) {
-      setState(() => _errorMessage = '카메라를 찾을 수 없어요.');
+      if (mounted) {
+        setState(() => _errorMessage =
+            '카메라를 사용할 수 없어요. 아래 갤러리 버튼으로 사진을 불러올 수 있어요.');
+      }
       return;
     }
+    _initializing = true;
+    final controller = CameraController(
+      _cameras.first,
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
+    _controller = controller;
     try {
-      _controller = CameraController(
-        _cameras.first,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-      await _controller!.initialize();
-      if (mounted) {
-        setState(() => _initialized = true);
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
       }
+      setState(() {
+        _initialized = true;
+        _errorMessage = null;
+      });
     } catch (e) {
+      debugPrint('Camera init error: $e');
       if (mounted) {
-        setState(() => _errorMessage = '카메라 오류: $e');
+        setState(() {
+          _initialized = false;
+          _errorMessage =
+              '카메라를 사용할 수 없어요. 아래 갤러리 버튼으로 사진을 불러올 수 있어요.';
+        });
       }
+    } finally {
+      _initializing = false;
     }
   }
 
@@ -118,6 +155,7 @@ class _ProtractorScreenState extends State<ProtractorScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
   }
@@ -288,7 +326,6 @@ class ProtractorPainter extends CustomPainter {
     canvas.scale(scale);
 
     const double r = 160.0; // 반지름
-    final Color mainColor = Colors.black.withAlpha(200);
     final Color tickColor = Colors.black;
 
     // 1. 투명한 반원 배경
@@ -340,12 +377,8 @@ class ProtractorPainter extends CustomPainter {
       }
     }
 
-    // 4. 중앙 십자선 및 Oxford 로고 느낌의 텍스트
+    // 4. 중앙 십자선
     _drawCenterMark(canvas, r);
-    
-    // 브랜드 텍스트 모사
-    _drawBrandText(canvas, "OXFORD", Offset(-r * 0.6, -25), 14);
-    _drawBrandText(canvas, "Helix", Offset(r * 0.6, -15), 12);
 
     canvas.restore();
   }
@@ -364,17 +397,6 @@ class ProtractorPainter extends CustomPainter {
     // 숫자가 읽기 편하게 살짝 회전 보정 (선택 사항)
     tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
     canvas.restore();
-  }
-
-  void _drawBrandText(Canvas canvas, String text, Offset offset, double fontSize) {
-    final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(color: Colors.black.withAlpha(180), fontSize: fontSize, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, offset);
   }
 
   void _drawCenterMark(Canvas canvas, double r) {
